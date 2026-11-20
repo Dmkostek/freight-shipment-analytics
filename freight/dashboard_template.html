@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freight network performance</title>
+<script src="plotly.min.js" charset="utf-8"></script>
+<style>
+  :root { --ink:#17212b; --muted:#5a6672; --faint:#8a95a1; --line:#e3e8ed; --soft:#f5f7f9; --accent:#1f5fa8; --good:#1f8a70; --bad:#c8553d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#fff; color:var(--ink); font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
+  header { padding:36px 0 8px; }
+  .eyebrow { margin:0 0 6px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); }
+  h1 { margin:0 0 10px; font-size:32px; line-height:1.15; letter-spacing:-.01em; }
+  .lede { margin:0; max-width:820px; font-size:17px; color:var(--ink); min-height:112px; }
+  @media (max-width:640px) { .lede { min-height:190px; } }
+  .filters { margin:22px 0 4px; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); display:grid; gap:12px; }
+  .frow { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  .flabel { width:92px; flex:none; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font:inherit; font-size:13px; padding:5px 12px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--ink); cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
+  .chip:hover { border-color:#b9c4cf; }
+  .chip[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .dot { width:9px; height:9px; border-radius:50%; flex:none; }
+  .reset { margin-left:auto; font:inherit; font-size:13px; color:var(--accent); background:none; border:0; cursor:pointer; padding:4px 0; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); margin:20px 0 8px; }
+  .kpi { padding:6px 18px 6px 0; }
+  .kpi .l { font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); }
+  .kpi .v { font-size:28px; font-weight:650; letter-spacing:-.01em; }
+  section { padding:34px 0 8px; border-top:1px solid var(--line); margin-top:26px; }
+  h2 { margin:0 0 4px; font-size:21px; letter-spacing:-.005em; }
+  .dek { margin:0 0 14px; max-width:760px; color:var(--muted); }
+  .two { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr)); gap:28px; }
+  .chart { width:100%; height:340px; }
+  .chart.tall { height:400px; }
+  h3 { margin:14px 0 2px; font-size:14px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th { font-weight:600; color:var(--muted); font-size:12px; }
+  th:first-child, td:first-child { text-align:left; }
+  .cell { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
+  .bar { height:8px; border-radius:2px; background:var(--accent); display:inline-block; }
+  .cname { display:inline-flex; align-items:center; gap:8px; }
+  .scroll { overflow-x:auto; }
+  #empty { display:none; margin:24px 0; padding:28px; text-align:center; color:var(--muted); background:var(--soft); border-radius:8px; }
+  .fallback { padding:40px 0; color:var(--muted); text-align:center; }
+  footer { margin:44px 0 48px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+  footer code { background:var(--soft); padding:2px 7px; border-radius:4px; user-select:all; }
+  footer a { color:var(--accent); }
+  .copy { font:inherit; font-size:12px; margin-left:6px; padding:2px 9px; border:1px solid var(--line); border-radius:999px; background:#fff; cursor:pointer; }
+  @media (max-width:640px) { .flabel { width:100%; } h1 { font-size:26px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <p class="eyebrow">Simulated data &middot; fictional network &middot; 2023&ndash;2024</p>
+  <h1>Freight network performance</h1>
+  <p class="lede" id="headline"></p>
+</header>
+<noscript><p>This dashboard needs JavaScript to draw its charts.</p></noscript>
+
+<div class="filters" id="filters">
+  <div class="frow"><span class="flabel">Year</span><div class="chips" id="g-year"></div><button class="reset" id="reset" type="button">Reset filters</button></div>
+  <div class="frow"><span class="flabel">Carrier</span><div class="chips" id="g-car"></div></div>
+  <div class="frow"><span class="flabel">Lane</span><div class="chips" id="g-lane"></div></div>
+  <div class="frow"><span class="flabel">Transport</span><div class="chips" id="g-mode"></div></div>
+  <div class="frow"><span class="flabel">Cargo</span><div class="chips" id="g-adr"></div></div>
+</div>
+<div id="empty">No shipments match these filters. Try removing one.</div>
+<div class="kpis" id="kpis"></div>
+
+<section>
+  <h2>Reliability: who delivers what they promise?</h2>
+  <p class="dek">A shipment is on time if it arrives within the transit days that were quoted. The shaded months are the ones in which customs holds are most likely.</p>
+  <div id="c-monthly" class="chart"></div>
+  <h3>Carrier scorecard</h3>
+  <p class="dek">Net cost is the freight price plus the credits paid to customers for late delivery (1% of revenue per day late, up to five days).</p>
+  <div class="scroll"><table id="t-carriers"></table></div>
+</section>
+
+<section>
+  <h2>Promises: how late is late, and are the quotes honest?</h2>
+  <p class="dek">Some carriers are rarely late because they quote generously; others look unreliable mainly because they quote too optimistically.</p>
+  <div class="two">
+    <div><h3>Days late, by carrier</h3><div id="c-delay" class="chart"></div></div>
+    <div><h3>Quoted minus actual transit days</h3><div id="c-quote" class="chart"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Cost: the cheapest price is not always the cheapest carrier</h2>
+  <p class="dek">Open markers show the freight price per kg. Filled markers show the cost once late-delivery credits are added. A long line means a carrier that is cheap to book and costly to rely on.</p>
+  <div class="two">
+    <div><h3>Price versus total cost, per kg</h3><div id="c-dumbbell" class="chart"></div></div>
+    <div><h3>Where the money goes, by lane</h3><div id="c-cost" class="chart"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Margin: where does the money come from?</h2>
+  <p class="dek">Margin after landed cost: product, freight, customs, handling, insurance and late credits. Combinations with fewer than 15 shipments are left blank.</p>
+  <div class="two">
+    <div><h3>Margin by lane and carrier</h3><div id="c-margin" class="chart tall"></div></div>
+    <div><h3>Margin for the eight largest customers</h3><div id="c-customer" class="chart tall"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Optimiser: a better carrier mix</h2>
+  <p class="dek" id="alloc-note"></p>
+  <div class="two">
+    <div><h3>The price of reliability</h3><div id="c-frontier" class="chart"></div></div>
+    <div><h3>Recommended share of volume</h3><div class="scroll" style="max-height:340px;overflow:auto"><table id="t-alloc"></table></div></div>
+  </div>
+</section>
+
+<footer>
+  All places, carriers and customers are fictional and the data is simulated. Built from a SQL warehouse with data-quality checks and a linear-programming carrier allocation. Charts: Plotly.js (MIT licence).<br>
+  Source code: <a href="__REPO_URL__" target="_blank" rel="noopener">__REPO_URL__</a> <button class="copy" id="copy" type="button">Copy link</button>
+</footer>
+</div>
+<script>
+const D = /*__DATA__*/ null;
+const HAVE_PLOTLY = typeof Plotly !== 'undefined';
+const CAR_COLORS = ['#1f6fb2', '#d9962b', '#c8553d', '#8c64b0', '#2a9a7a', '#6f7f8f'];
+const PARTS = [['base', 'Base freight', '#1f6fb2'], ['fuel', 'Fuel surcharge', '#d9962b'], ['adrs', 'Dangerous goods', '#c8553d'], ['cust', 'Customs and border', '#8c64b0'], ['hand', 'Handling', '#2a9a7a'], ['ins', 'Insurance', '#b5bd3a'], ['pen', 'Late credits', '#3d4852']];
+const $ = id => document.getElementById(id);
+const int = new Intl.NumberFormat('en-US');
+const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
+const eur = (x, d = 3) => '€' + x.toFixed(d);
+const CFG = { displayModeBar: false, responsive: true };
+const FONT = { family: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', size: 12, color: '#17212b' };
+const LAY = { margin: { t: 8, r: 24, b: 44, l: 56 }, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: FONT, legend: { orientation: 'h', y: -0.2 } };
+const GRID = '#edf0f3';
+
+// ---------- filter state and chips ----------
+const S = { year: 'all', adr: 'all', mode: new Set(), car: new Set(), lane: new Set() };
+const GROUPS = {
+  year: { el: 'g-year', multi: false, allLabel: 'All years', items: [...new Set(D.year)].sort().map(y => ({ v: y, label: String(y) })) },
+  car: { el: 'g-car', multi: true, allLabel: 'All carriers', items: D.carriers.map((n, i) => ({ v: i, label: n, color: CAR_COLORS[i % 6] })) },
+  lane: { el: 'g-lane', multi: true, allLabel: 'All lanes', items: D.lanes.map((n, i) => ({ v: i, label: n })) },
+  mode: { el: 'g-mode', multi: true, allLabel: 'All modes', items: D.modes.map((n, i) => ({ v: i, label: n })) },
+  adr: { el: 'g-adr', multi: false, allLabel: 'All cargo', items: [{ v: 0, label: 'Standard goods' }, { v: 1, label: 'Dangerous goods' }] },
+};
+function isActive(g, v) { return GROUPS[g].multi ? (v === 'all' ? S[g].size === 0 : S[g].has(v)) : S[g] === v; }
+function drawChips() {
+  for (const [g, def] of Object.entries(GROUPS)) {
+    const all = [{ v: 'all', label: def.allLabel }, ...def.items];
+    $(def.el).innerHTML = all.map(it => `<button type="button" class="chip" data-g="${g}" data-v="${it.v}" aria-pressed="${isActive(g, it.v)}">${it.color ? `<span class="dot" style="background:${it.color}"></span>` : ''}${it.label}</button>`).join('');
+  }
+}
+function syncChips() {
+  document.querySelectorAll('.chip').forEach(b => { const raw = b.dataset.v; b.setAttribute('aria-pressed', String(isActive(b.dataset.g, raw === 'all' ? 'all' : Number(raw)))); });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const g = b.dataset.g, raw = b.dataset.v, v = raw === 'all' ? 'all' : Number(raw);
+  if (GROUPS[g].multi) { if (v === 'all') S[g].clear(); else if (S[g].has(v)) S[g].delete(v); else S[g].add(v); }
+  else S[g] = (v === 'all' || S[g] === v) ? 'all' : v;
+  syncChips(); render();
+});
+$('reset').addEventListener('click', () => { S.year = 'all'; S.adr = 'all'; S.mode.clear(); S.car.clear(); S.lane.clear(); syncChips(); render(); });
+$('copy').addEventListener('click', () => { try { navigator.clipboard.writeText('__REPO_URL__'); $('copy').textContent = 'Copied'; } catch (e) { $('copy').textContent = 'Select the link and copy it'; } });
+
+function indices() {
+  const out = [];
+  for (let i = 0; i < D.n; i++) {
+    if (S.year !== 'all' && D.year[i] !== S.year) continue;
+    if (S.adr !== 'all' && D.adr[i] !== S.adr) continue;
+    if (S.mode.size && !S.mode.has(D.mode[i])) continue;
+    if (S.car.size && !S.car.has(D.car[i])) continue;
+    if (S.lane.size && !S.lane.has(D.lane[i])) continue;
+    out.push(i);
+  }
+  return out;
+}
+
+// ---------- helpers ----------
+const sum = (col, idx) => { let s = 0; for (const i of idx) s += D[col][i]; return s; };
+const freight = idx => sum('base', idx) + sum('fuel', idx) + sum('adrs', idx) + sum('cust', idx) + sum('hand', idx);
+const landed = idx => sum('pc', idx) + freight(idx) + sum('ins', idx) + sum('pen', idx);
+const marginOf = idx => (sum('rev', idx) - landed(idx)) / sum('rev', idx);
+function group(idx, key) { const m = new Map(); for (const i of idx) { const k = D[key][i]; if (!m.has(k)) m.set(k, []); m.get(k).push(i); } return m; }
+const onTime = idx => idx.filter(i => D.late[i] === 0).length / idx.length;
+const cname = k => D.carriers[k];
+function carrierStats(idx) {
+  return [...group(idx, 'car')].map(([k, ii]) => ({ k, ii, n: ii.length, ot: onTime(ii), fr: freight(ii) / sum('kg', ii), net: (freight(ii) + sum('pen', ii)) / sum('kg', ii), quote: (sum('q', ii) - sum('tr', ii)) / ii.length, kg: sum('kg', ii) }));
+}
+function plot(id, traces, layout) { if (!HAVE_PLOTLY) { $(id).innerHTML = '<div class="fallback">The chart library did not load.</div>'; return; } Plotly.react(id, traces, layout, CFG); }
+function clearPlots() { if (HAVE_PLOTLY) ['c-monthly', 'c-delay', 'c-quote', 'c-dumbbell', 'c-cost', 'c-margin', 'c-customer'].forEach(id => Plotly.purge(id)); }
+
+// ---------- headline and KPIs ----------
+function renderHeadline(idx) {
+  const rows = carrierStats(idx).filter(r => r.n >= 20);
+  let t = `${int.format(idx.length)} shipments, ${pct(onTime(idx), 0)} delivered within their quoted time.`;
+  if (rows.length >= 2) {
+    const best = rows.reduce((a, b) => a.ot >= b.ot ? a : b), worst = rows.reduce((a, b) => a.ot <= b.ot ? a : b);
+    const share = worst.kg / rows.reduce((s, r) => s + r.kg, 0);
+    t += ` ${cname(best.k)} is the most reliable (${pct(best.ot, 0)}); ${cname(worst.k)} is the least (${pct(worst.ot, 0)}) and carries ${pct(share, 0)} of the volume.`;
+    const cheap = rows.reduce((a, b) => a.fr <= b.fr ? a : b), cheapNet = rows.reduce((a, b) => a.net <= b.net ? a : b);
+    if (cheap.k !== cheapNet.k) t += ` ${cname(cheap.k)} has the lowest freight price (${eur(cheap.fr)} per kg), but ${cname(cheapNet.k)} is cheaper once late credits are counted (${eur(cheapNet.net)} against ${eur(cheap.net)}).`;
+  }
+  $('headline').textContent = t;
+}
+function renderKpis(idx) {
+  const late = idx.filter(i => D.late[i] > 0);
+  const cards = [
+    [int.format(idx.length), 'Shipments'], [int.format(Math.round(sum('kg', idx) / 1000)) + ' t', 'Volume'],
+    [pct(onTime(idx)), 'On time'], [late.length ? (sum('late', late) / late.length).toFixed(1) + ' days' : '–', 'Avg. days late'],
+    [eur(freight(idx) / sum('kg', idx)), 'Freight per kg'], [pct(marginOf(idx)), 'Margin'],
+  ];
+  $('kpis').innerHTML = cards.map(([v, l]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+}
+
+// ---------- charts and tables ----------
+function renderMonthly(idx) {
+  const g = group(idx, 'month'), ks = [...g.keys()].sort((a, b) => a - b), x = ks.map(k => D.months[k]);
+  const shapes = ks.map((k, j) => ({ month: +D.months[k].slice(5), j })).filter(o => [12, 1, 7].includes(o.month)).map(o => ({ type: 'rect', xref: 'x', yref: 'paper', x0: o.j - 0.5, x1: o.j + 0.5, y0: 0, y1: 1, fillcolor: '#f6e3df', line: { width: 0 }, layer: 'below' }));
+  plot('c-monthly', [
+    { type: 'bar', x, y: ks.map(k => g.get(k).length), name: 'Shipments', marker: { color: '#d6dee7' }, yaxis: 'y' },
+    { type: 'scatter', mode: 'lines+markers', x, y: ks.map(k => onTime(g.get(k))), name: 'On-time rate', line: { color: '#1f5fa8', width: 2.5 }, marker: { size: 6 }, yaxis: 'y2' },
+  ], { ...LAY, shapes, margin: { ...LAY.margin, r: 52 }, yaxis: { title: 'Shipments', gridcolor: GRID }, yaxis2: { overlaying: 'y', side: 'right', range: [0.4, 1], tickformat: '.0%', showgrid: false }, xaxis: { type: 'category', tickangle: -45 } });
+}
+function renderScorecard(idx) {
+  const rows = carrierStats(idx).sort((a, b) => b.ot - a.ot);
+  const maxNet = Math.max(...rows.map(r => r.net)), bestOt = Math.max(...rows.map(r => r.ot)), worstOt = Math.min(...rows.map(r => r.ot));
+  $('t-carriers').innerHTML = '<tr><th>Carrier</th><th>Shipments</th><th>Volume</th><th>On time</th><th>Quote error (days)</th><th>Freight price /kg</th><th>Net cost /kg</th><th>Margin</th></tr>' + rows.map(r => {
+    const col = rows.length > 1 && r.ot === bestOt ? 'var(--good)' : rows.length > 1 && r.ot === worstOt ? 'var(--bad)' : '#9aa7b4';
+    return `<tr><td><span class="cname"><span class="dot" style="background:${CAR_COLORS[r.k % 6]}"></span>${cname(r.k)}</span></td><td>${int.format(r.n)}</td><td>${int.format(Math.round(r.kg / 1000))} t</td>` +
+      `<td><div class="cell"><span class="bar" style="width:${(r.ot * 80).toFixed(0)}px;background:${col}"></span>${pct(r.ot)}</div></td><td>${r.quote > 0 ? '+' : ''}${r.quote.toFixed(2)}</td><td>${eur(r.fr)}</td>` +
+      `<td><div class="cell"><span class="bar" style="width:${(r.net / maxNet * 60).toFixed(0)}px"></span>${eur(r.net)}</div></td><td>${pct(marginOf(r.ii))}</td></tr>`;
+  }).join('');
+}
+function renderDelay(idx) {
+  const rows = carrierStats(idx).sort((a, b) => a.ot - b.ot), y = rows.map(r => cname(r.k));
+  const frac = (r, f) => r.ii.filter(i => f(D.late[i])).length / r.n;
+  const defs = [['On time', l => l === 0, '#2a9a7a'], ['1 day late', l => l === 1, '#e2b441'], ['2 days late', l => l === 2, '#d9822b'], ['3+ days late', l => l >= 3, '#c8553d']];
+  plot('c-delay', defs.map(([name, f, color]) => ({ type: 'bar', orientation: 'h', y, x: rows.map(r => frac(r, f)), name, marker: { color }, text: rows.map(r => frac(r, f) >= 0.06 ? pct(frac(r, f), 0) : ''), textposition: 'inside', insidetextfont: { color: '#fff' }, hoverinfo: 'name+x' })),
+    { ...LAY, barmode: 'stack', margin: { ...LAY.margin, l: 150 }, xaxis: { tickformat: '.0%', gridcolor: GRID, range: [0, 1] }, yaxis: { automargin: true } });
+}
+function renderQuote(idx) {
+  const rows = carrierStats(idx).sort((a, b) => a.ot - b.ot), y = rows.map(r => cname(r.k));
+  plot('c-quote', [{ type: 'bar', orientation: 'h', y, x: rows.map(r => r.quote), marker: { color: rows.map(r => r.quote < 0 ? '#c8553d' : '#2a9a7a') }, text: rows.map(r => (r.quote > 0 ? '+' : '') + r.quote.toFixed(2)), textposition: 'outside', cliponaxis: false, hoverinfo: 'y+x' }],
+    { ...LAY, showlegend: false, margin: { ...LAY.margin, l: 150, r: 48 }, xaxis: { title: 'Days. Negative: quote too optimistic. Positive: quote padded.', zeroline: true, zerolinecolor: '#17212b', gridcolor: GRID }, yaxis: { automargin: true } });
+}
+function renderDumbbell(idx) {
+  const rows = carrierStats(idx).sort((a, b) => b.net - a.net), y = rows.map(r => cname(r.k));
+  const lx = [], ly = []; rows.forEach(r => { lx.push(r.fr, r.net, null); ly.push(cname(r.k), cname(r.k), null); });
+  plot('c-dumbbell', [
+    { type: 'scatter', mode: 'lines', x: lx, y: ly, line: { color: '#b7c1cb', width: 3 }, hoverinfo: 'skip', showlegend: false },
+    { type: 'scatter', mode: 'markers', x: rows.map(r => r.fr), y, name: 'Freight price', marker: { size: 11, color: '#fff', line: { color: '#17212b', width: 2 } } },
+    { type: 'scatter', mode: 'markers+text', x: rows.map(r => r.net), y, name: 'Total with late credits', marker: { size: 11, color: rows.map(r => CAR_COLORS[r.k % 6]) }, text: rows.map(r => eur(r.net)), textposition: 'middle right', cliponaxis: false },
+  ], { ...LAY, margin: { ...LAY.margin, l: 150, r: 60 }, xaxis: { title: 'EUR per kg', tickformat: '.2f', gridcolor: GRID }, yaxis: { automargin: true } });
+}
+function renderCost(idx) {
+  const g = group(idx, 'lane'), ks = [...g.keys()], tot = k => (freight(g.get(k)) + sum('ins', g.get(k)) + sum('pen', g.get(k))) / sum('kg', g.get(k));
+  ks.sort((a, b) => tot(a) - tot(b)); const y = ks.map(k => D.lanes[k]);
+  plot('c-cost', PARTS.map(([key, name, color]) => ({ type: 'bar', orientation: 'h', y, x: ks.map(k => sum(key, g.get(k)) / sum('kg', g.get(k))), name, marker: { color }, hoverinfo: 'name+x' })),
+    { ...LAY, barmode: 'stack', margin: { ...LAY.margin, l: 150, r: 56 }, legend: { orientation: 'h', y: -0.3 }, xaxis: { title: 'EUR per kg', tickformat: '.2f', gridcolor: GRID }, yaxis: { automargin: true },
+      annotations: ks.map(k => ({ x: tot(k), y: D.lanes[k], text: eur(tot(k)), showarrow: false, xanchor: 'left', xshift: 6, font: { size: 11 } })) });
+}
+function renderMargin(idx) {
+  const lanes = [...group(idx, 'lane').keys()].sort((a, b) => a - b), cars = [...group(idx, 'car').keys()].sort((a, b) => a - b);
+  const z = lanes.map(l => cars.map(c => { const ii = idx.filter(i => D.lane[i] === l && D.car[i] === c); return ii.length >= 15 ? 100 * marginOf(ii) : null; }));
+  plot('c-margin', [{ type: 'heatmap', z, x: cars.map(cname), y: lanes.map(l => D.lanes[l]), colorscale: [[0, '#c8553d'], [0.5, '#f6ecb0'], [1, '#2a9a7a']], colorbar: { title: 'Margin %', thickness: 10 }, hoverongaps: false, text: z.map(r => r.map(v => v === null ? '' : v.toFixed(1))), texttemplate: '%{text}' }],
+    { ...LAY, margin: { ...LAY.margin, l: 40, b: 70 }, xaxis: { tickangle: -25, automargin: true }, yaxis: { automargin: true } });
+}
+function renderCustomer(idx) {
+  const total = sum('rev', idx);
+  const rows = [...group(idx, 'cus')].map(([k, ii]) => ({ name: 'Customer ' + D.customers[k].slice(1), rev: sum('rev', ii), m: marginOf(ii), n: ii.length })).sort((a, b) => b.rev - a.rev).slice(0, 8).reverse();
+  const others = marginOf(idx);
+  plot('c-customer', [{ type: 'bar', orientation: 'h', y: rows.map(r => r.name), x: rows.map(r => r.m), marker: { color: rows.map(r => r.m < others - 0.03 ? '#c8553d' : '#1f5fa8') }, text: rows.map(r => `${pct(r.m)} \u00b7 ${pct(r.rev / total, 0)} of revenue`), textposition: 'outside', cliponaxis: false, customdata: rows.map(r => r.n), hovertemplate: '%{y}: %{x:.1%} margin, %{customdata} shipments<extra></extra>' }],
+    { ...LAY, showlegend: false, margin: { ...LAY.margin, t: 30, l: 100, r: 130 }, xaxis: { tickformat: '.0%', gridcolor: GRID, range: [0, 0.32] }, yaxis: { automargin: true },
+      shapes: [{ type: 'line', xref: 'x', yref: 'paper', x0: others, x1: others, y0: 0, y1: 1, line: { color: '#17212b', width: 1, dash: 'dot' } }],
+      annotations: [{ x: others, y: 1, yref: 'paper', text: 'all selected: ' + pct(others), showarrow: false, yanchor: 'bottom', font: { size: 11 } }] });
+}
+function renderStatic() {
+  const f = D.frontier, s = D.allocation_summary, tgt = f.find(r => Math.abs(r.target - s.on_time_target) < 1e-9);
+  plot('c-frontier', [
+    { type: 'scatter', mode: 'lines+markers', x: f.map(r => r.on_time), y: f.map(r => r.cost_per_kg), name: 'Optimised mix', line: { color: '#1f5fa8', width: 2.5 }, marker: { size: 6 } },
+    { type: 'scatter', mode: 'markers+text', x: [s.baseline_on_time], y: [s.baseline_cost_per_kg], name: 'Current mix', marker: { color: '#c8553d', size: 13, symbol: 'diamond' }, text: ['Today'], textposition: 'top center' },
+    ...(tgt ? [{ type: 'scatter', mode: 'markers+text', x: [tgt.on_time], y: [tgt.cost_per_kg], name: 'Recommended (85% target)', marker: { color: '#17212b', size: 12, symbol: 'star' }, text: ['Recommended'], textposition: 'bottom center' }] : []),
+  ], { ...LAY, xaxis: { title: 'Volume-weighted on-time rate', tickformat: '.0%', gridcolor: GRID }, yaxis: { title: 'Expected cost, EUR per kg', tickformat: '.3f', gridcolor: GRID } });
+  $('alloc-note').textContent = `Target: at least ${pct(s.on_time_target, 0)} on time in every segment (or the best any carrier achieves there), and no carrier above ${pct(s.max_carrier_share, 0)} of volume. Expected cost falls from ${eur(s.baseline_cost_per_kg, 4)} to ${eur(s.optimized_cost_per_kg, 4)} per kg (${pct(s.saving_pct)}) while on-time delivery rises from ${pct(s.baseline_on_time)} to ${pct(s.optimized_on_time)}. These are estimates from historical averages and assume carriers keep their prices when volumes move.`;
+  const rows = D.allocation.filter(r => r.recommended > 0.01 || r.current > 0.01);
+  $('t-alloc').innerHTML = '<tr><th>Segment</th><th>Carrier</th><th>On time</th><th>Cost /kg</th><th>Now</th><th>Recommended</th></tr>' + rows.map(r => {
+    const ci = D.carriers.indexOf(r.carrier);
+    return `<tr><td>${r.segment}</td><td><span class="cname"><span class="dot" style="background:${CAR_COLORS[ci % 6]}"></span>${r.carrier}</span></td><td>${pct(r.on_time, 0)}</td><td>${eur(r.cost_per_kg)}</td>` +
+      `<td><div class="cell"><span class="bar" style="width:${(r.current * 60).toFixed(0)}px;background:#b7c1cb"></span>${pct(r.current, 0)}</div></td><td><div class="cell"><span class="bar" style="width:${(r.recommended * 60).toFixed(0)}px"></span><b>${pct(r.recommended, 0)}</b></div></td></tr>`;
+  }).join('');
+}
+
+function render() {
+  const idx = indices(), none = idx.length === 0;
+  $('empty').style.display = none ? 'block' : 'none';
+  $('kpis').style.display = none ? 'none' : '';
+  if (none) { $('headline').textContent = 'No shipments match the current filters.'; clearPlots(); $('t-carriers').innerHTML = ''; return; }
+  renderHeadline(idx); renderKpis(idx); renderScorecard(idx);
+  renderMonthly(idx); renderDelay(idx); renderQuote(idx); renderDumbbell(idx); renderCost(idx); renderMargin(idx); renderCustomer(idx);
+}
+drawChips();
+renderStatic();
+render();
+</script>
+</body>
+</html>

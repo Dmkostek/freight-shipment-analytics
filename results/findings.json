@@ -1,0 +1,39 @@
+{
+  "kpis": {
+    "shipments": 7398,
+    "volume_tonnes": 52046.49,
+    "on_time_rate": 0.7526358475263585,
+    "avg_days_late_when_late": 1.4934426229508198,
+    "freight_per_kg": 0.13095437559766276,
+    "margin_pct": 0.17843253965219813,
+    "adr_share": 0.3425250067585834
+  },
+  "least_reliable_carrier": "D",
+  "most_reliable_carrier": "E",
+  "cheapest_carrier_by_freight": "C",
+  "lanes_where_cheapest_changes": 6,
+  "lanes_total": 6,
+  "seasonality": {
+    "late_share_hold_months": 0.2820037105751391,
+    "late_share_other_months": 0.2376751427088739,
+    "z": 3.6519279501247706,
+    "p_value": 0.0002602789173039007
+  },
+  "lowest_margin_lane": "Rheinhafen > Vestmark",
+  "lowest_margin_lane_pct": 0.16794083592195064,
+  "top_customer_revenue_share": 0.2231291633365658,
+  "top_customer_margin_pct": 0.13488725142222335,
+  "other_customers_margin_pct": 0.19093941115703394,
+  "optimization": {
+    "on_time_target": 0.85,
+    "max_carrier_share": 0.45,
+    "baseline_cost_eur": 7475339.696000001,
+    "optimized_cost_eur": 7305687.39077406,
+    "saving_eur": 169652.30522594135,
+    "saving_pct": 0.02269492921060444,
+    "baseline_cost_per_kg": 0.14362812354877344,
+    "optimized_cost_per_kg": 0.14036849345218208,
+    "baseline_on_time": 0.7510517960350692,
+    "optimized_on_time": 0.8673528763057746
+  }
+}

@@ -1,0 +1,14 @@
+check,violations
+shipment_id_is_unique,0
+every_carrier_name_resolves,0
+every_lane_exists,0
+every_customer_exists,0
+no_shipment_lost_in_cleaning,0
+money_is_non_negative_and_revenue_positive,0
+weight_and_quote_are_positive,0
+delivery_is_not_before_shipping,0
+only_recent_shipments_are_in_transit,0
+dangerous_goods_only_with_certified_carriers,0
+carrier_serves_the_lane_mode,0
+margin_identity_holds,0
+marts_keep_every_staged_shipment,0
